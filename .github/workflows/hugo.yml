@@ -1,0 +1,48 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Set ssh key cache
+      - name: webfactory/ssh-agent
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: | 
+            ${{secrets.SSH_KEY}}
+      
+      # Scan public keys
+      - name: Scan public keys
+        run: |
+          ssh-keyscan lancitou.net >> ~/.ssh/known_hosts
+      
+      # Build hugo
+      - name: Powerful Hugo
+        uses: klakegg/actions-hugo@1.0.0
+      
+      # Build
+      - name: Build
+        run: |
+          hugo --minify
+      - name: Deploy
+        run: |
+          rsync -e 'ssh -p ${{secrets.REMOTE_PORT}}' -av --delete public ${{secrets.REMOTE_USER}}@${{secrets.REMOTE_HOST}}:${{secrets.REMOTE_PATH}}
